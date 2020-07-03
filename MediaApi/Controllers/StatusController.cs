@@ -22,7 +22,7 @@ namespace MediaApi.Controllers
         {
             var response = new StatusResponse
             {
-                Message = "Everything works.",
+                Message = "Everything works. Here in docker land",
                 CreatedAt = Clock.GetCurrent()
             };
             return Ok(response); // this will return a 200.

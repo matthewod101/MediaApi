@@ -1,7 +1,9 @@
 ﻿using MediaApi.Domain;
+using MediaApi.Helpers;
 using MediaApi.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Internal;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,10 +14,49 @@ namespace MediaApi.Controllers
     public class MediaController: ControllerBase
     {
         MediaDataContext Context;
+        ISystemTime Current;
 
-        public MediaController(MediaDataContext context)
+        public MediaController(MediaDataContext context, ISystemTime current)
         {
             Context = context;
+            Current = current;
+        }
+
+        [HttpPost("media/consumed")]
+        public async Task<IActionResult> ConsumedMedia([FromBody] PostMediaConsumedRequest request)
+        {
+            if(!ModelState.IsValid)
+            {
+                return BadRequest(request);
+            }
+
+            var media = await Context.MediaItems
+                .Where(m => m.Removed == false && m.Id == request.Id)
+                .SingleOrDefaultAsync();
+            if(media == null)
+            {
+                return BadRequest("Bad Media"); // Conflict
+            } else
+            {
+                media.Consumed = true;
+                media.DateConsumed = Current.GetCurrent();
+                await Context.SaveChangesAsync();
+                return NoContent();
+            }
+        }
+
+        [HttpDelete("media/{id:int}")]
+        public async Task<IActionResult> RemoveMediaItem(int id)
+        {
+            var item = await Context.MediaItems
+                .Where(m => m.Removed == false && m.Id == id)
+                .SingleOrDefaultAsync();
+            if(item != null)
+            {
+                item.Removed = true;
+                await Context.SaveChangesAsync();
+            }
+            return NoContent(); // this just means a sort of passive-aggressive "fine"
         }
 
         [HttpPost("media")]
